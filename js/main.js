@@ -1,384 +1,581 @@
-window.onload = function() {	
+window.onload = function() {
 
-	var canvas = document.getElementById("myCanvas");
-	var context = canvas.getContext("2d");	
-
-	// VARIABLES GLOBALES
-	// cursor global
-	var mouseX = 0;
-	var mouseY = 0;
-	var insideX = 0;
-	var insideY = 0;
-
-	// escenario global
-	context.fillText("loading...", 40, 140);
-	console.log("Starting game...");
-	var canvasPos = getPosition(canvas);
-	let factor = 0;
-	let altoEscenario = (canvas.height / 3) * 2; // dos terceras partes del alto del canvas
-	let horizonteX = canvas.height / 3;
-	var fps = 60;
+	let cvs = document.getElementById("miCanvas");
+	let ctx = cvs.getContext("2d");	
+	let fps = 60;
 	let frames = 0;
-	var board = new Board();
-	// protagonista global
-	var img = {};
-	let altoSalto = 30;
-	let jumpingTimeControl = 0;
-	let breathInc = 0.1;
-	let breathDir = 1;
-	let breathAmt = 0;
-	let breathMax = 2;
-	let breathInterval = setInterval(updateBreath, 1000 / fps);
-	breathInterval = setInterval(updateBreath, 50000 );
-	var maxEyeHeight = 14;
-	var curEyeHeight = maxEyeHeight;
-	var eyeOpenTime = 0;
-	var timeBtwBlinks = 40;
-	var blinkUpdateTime = 50;                    
-	var blinkTimer = setInterval(updateBlink, blinkUpdateTime);
-	var fpsInterval = setInterval(updateFPS, 1000);
+	let intervalo = 0;
+	// PROTAGONISTA
+	let spt = new Image();
+	let cualH = 0;
+	let cualV = 0;
+	let cuantosH; // cuantos hay horizontales
+	let cuantosV; // cuantos hay verticales
+	let chX;	
+	let chY;
+	let chW;
+	let chH;
+	let VelocidadNormal = 15;
+	let centro;
+	let exponencial;
+	let gravedad = 1;
 
-	// Triggers
-	document.getElementById("start-button").onclick = function() {
-		startGame();
-	}
-	canvas.addEventListener("mousemove", setMousePosition, false);
-	canvas.addEventListener("mousedown", salta, false);
-	addEventListener("keydown", function(e){
-		console.log("Codeando el press 32");
-		if (e.keyCode === 32){
-			salta();
-  		}
-  	});
+	// PLATAFORMA
+	let island = new Image();
+	let horizonte;
+	let cuadritoSize;
+	let board = new Board();
+	let img = new Image();
+	let img2 = new Image();
+	let nube = new Image();
+	let bomba = new Image();
+	let kapow = new Image();
+	let coco = new Image();
+	// let cascara = new Image();
+	let fondo = new Image();
+	let damage = [];
+	let puntosExtra = [];
+	let gameOver = false;
+	let ganador = false;
 
-	// Fondo del juego
-	function Board(){
-	  	this.x = 0;
-	  	this.y = canvas.height / 3;
-	  	this.width = canvas.width;
-	  	this.height = (canvas.height / 3) * 2;
-	  	this.score = 0;
-	  	this.img = new Image();
-	  	this.img.src = 'images/marSmall.jpg';  	
+	//BOMBAS
+	bombas 		= [];	
+	cocos   	= [];
+	// cascaras 	= [];
+	// for(let i = 0; i< 10; i++){
+	// 	bombas[i] = {x:i * 60, y:1};
+	// }				
 
-	  	this.img.onload = function(){
-	  		this.draw();
-	  	}.bind(this); // cambiar el apuntador de img a Board
-
-	  	this.move = function(){
-				
-	  		this.x--;
-	  		if(this.x < -canvas.width) this.x = 0;
-	  	}
-
-	  	this.draw = function(){
-
-			if (!(frames%160 == 0)) return;
-
-  			this.move();
-  			context.drawImage(this.img, this.x, this. y, this.width, this.height);
-			context.drawImage(this.img, (this.x + this.width), this. y, this.width, this.height);			
-	  	}
-
-	  	this.drawScore = function(){
-	  		this.score = Math.floor(frames/60);
-	  		context.font = "50px Avenir";
-	  		context.fillStyle = "orange";
-	  		context.fillText("Puntos: " + this.score, this.width/2, this.y + 50);
-	  	}
-	}
+	redimensionar();
+	cargarComponentes();
 	
-	function circulo(){
-  	this.x = insideX;
-  	this.y = insideY;
-  	this.radio = 20;
-		this.height = (canvas.height / 3) * 2;
-		
-  	this.move = function(){			
-  		this.x--;
-  		if(this.x < -canvas.width) this.x = 0;
-  	}
+	// startGame();
 
-  	this.draw = function(){
-			if (!(frames%160 == 0)) return;
-  		this.move(); 		
-
-			radio2 = (( mouseY - 200 ) / 10 ) + 20;
-
-			context.beginPath();
-		// context.arc(350, 200, 50, 0, 2 * Math.PI, true);
-			context.arc(insideX, insideY, radio2, 0, 2 * Math.PI, true);
-			context.fillStyle = "green";
-			context.fill();
-  	}  	
-  }
-
-
-	// Inicio del juego
-	function startGame(){		
-		// manejo de los enemigos / bombas
-		let bombas = 8;
-		let radio = 40;
-		let radio2 = 0;
-		let inicioX = [0,100,200,300,400,500,600,700];
-		let inicioY = [0,0,0,0,0,0,0,0];
-		let finX = [0,100,200,300,400,500,600,700];
-		let finY = [600,600,600,600,600,600,600,600];	
-		let distance = 0;
-		let kaboom = false;
-		// manejo del protagonista		
-		loadImage("leftArm");
-		loadImage("legs");
-		loadImage("torso");
-		loadImage("rightArm");
-		loadImage("head");
-		loadImage("hair");		
-		loadImage("leftArm-jump");
-		loadImage("legs-jump");
-		loadImage("rightArm-jump");
-		loadImage("marSmall");		
-	}
-	
-	var totalResources = 9;
-	var numResourcesLoaded = 0;
-	var charX = (canvas.width / 2 );
-	var charY = (canvas.height / 2);
-	
-	var numFramesDrawn = 0;
-	var curFPS = 0;
-	var jumping = false;		
-
-	function loadImage(name) {
-	  img[name] = new Image();
-	  img[name].onload = function() { 
-		  resourceLoaded();
-	  }		
-		if (name == "marSmall") img[name].src = "images/" + name + ".jpg";
-		else img[name].src = "images/" + name + ".png";
-	  console.log("Cargando imagen " + name);
-	}
-
-	function resourceLoaded() {
-	  numResourcesLoaded += 1;
-	  if(numResourcesLoaded === totalResources) {
-			console.log("Recursos Cargados... \n Iniciando juego");	
-	  	update();	  		
-	  }
-	}
-
-	function update() {
-		// NOTA IMPORTANTE :::*** SALE MAS BARATO EN CPU DIBUJAR SOBRE EL CANVAS QUE ESTARLO LIMPIANDO CON CLEARRECT
+	// COMPONENTES
+	function cargarComponentes(){		
+		console.log("Cargando componentes");
+		cuantosH = 3; // cuantos hay horizontales
+		cuantosV = 2; // cuantos hay verticales
+		spt.src = "images/hongo.png";						
+		island.src = "images/IslandTwo.png";
+		img.src = 'images/marSmall.jpg';
+		img2.src = 'images/marSmall2.jpg';
+		nube.src = "images/Nubes.jpg";
+		bomba.src = "images/bombaFire.png";
+		kapow.src = "images/kapow.png";
+		coco.src  = "images/coco.png"
+		// cascara.src  = "images/cascara.png"
+		fondo.src = "images/background.jpg"
+	}	
+	function update(){ // se esta ejecutando cada fps veces por segundo		
+		ctx.clearRect(0,0,cvs.width,cvs.height);
 		board.draw();
-		board.drawScore();
-		// context.clearRect(0, 0, canvas.width, canvas.height);
-	 	drawLine(board.y);
-	 	drawCircle();
-	 	// dibujaBala();	 	
-	 	redraw();
-		setInterval(update, 1000 / fps); 
-		frames ++;
-	 	// console.log(" Y: " + ObjetivoY + " X: " + ObjetivoX + " XF: " + ObjetivoXFinal + " YF: " + ObjetivoYFinal);		
-	}
-
-	function setMousePosition(e) {
-		// mouseX = e.clientX;
-		// mouseY = e.clientY;
-		mouseX = e.clientX - canvasPos.x;
-		mouseY = e.clientY - canvasPos.y;
-		context.clearRect(25,25,600,100);
-		context.fillText(" mouseX: " + mouseX + "mouseY: " + mouseY, 50, 50);
-		context.fillText(" horizonteX: " + horizonteX, 60, 60);
-		if (mouseY >= horizonteX && mouseY < canvas.height) {
-			if (mouseX > 0 && mouseX < canvas.width){
-				insideX = mouseX;
-				insideY = mouseY;
-				factor = ( mouseY * 20 ) / canvas.height;
-				factor = (factor / 10) + .25;
-				context.fillText("factor: " + factor + " insideX: " + insideX + "insideY: " + insideY, 80, 80);
-			}			
-		}				
-	}  	
-
-	function drawLine(limiteSuperior){
-		context.beginPath();		
-		context.moveTo(0,limiteSuperior);
-		context.lineTo(canvas.width,limiteSuperior);
-		context.stroke();
-	}
-
-	function drawCircle(){	
-		if (!(frames%160 == 0)) return;
-		context.beginPath();
-		// context.arc(350, 200, 50, 0, 2 * Math.PI, true);
-		context.arc(insideX, insideY, 10 * factor, 0, 2 * Math.PI, true);
-		context.fillStyle = "yellow";
-		context.fill();
-	}
-
-	function dibujaBala(){				
-		for (b = 0; b < bombas; b++){			
-			context.beginPath();
-			context.arc(inicioX[b]	, inicioY[b], radio, 0, 2 * Math.PI, true);			
-			context.fillStyle = "black";
-
-			// distance = Math.sqrt(  Math.pow( (inicioX[b] − insideX) , 2 ) + Math.pow((inicioY[b] − insideY) , 2 )   ) − (radio2 + radio);
-
-			distance =( Math.sqrt( Math.pow( inicioX[b]-insideX, 2)  + Math.pow( inicioY[b]-insideY, 2) )  ) - (radio2 + radio);
-
-			if (distance < 15){
-				context.fillStyle = "red";
-			}			
-	  		context.fill();	  	
-			
-		}
-		for (b = 0; b < bombas; b++){
-			// inicioX[b] += 10;
-			inicioY[b] += .050;
-		}
-		for (b = 0; b < bombas; b++){
-			if (inicioY[b] > finY[b]){
-				inicioY[b] = 0;
-				// multiplos de 50 desde 0 hasta 300
-				let destino = (Math.floor(   (Math.random() * 7)   )) * 50
-				// por lo menos debe comenzar en 200
-				destino = destino + 200 				
-				finY[b] = destino;	
-			}
-		}				
-
-		// revisar colision				
+		// ctx.font = "20px Arial";
+		// ctx.fillText("chX: " + chX,200,20);
+		// ctx.fillText("cvs.width: " + cvs.width,200,40);
+		// ctx.fillText("chW / 2: " + chW ,200,60);
+		let center = (cvs.width / 2);
+		// ctx.fillText("Center:" + center,200,80);		
+		// chX += (center2 / 100);
+		// ctx.fillText("centro: " + (chX - centro),200,120);		
+		exponencial = (chX - centro) / 100;
+		chX += exponencial;
+		// ctx.fillText("exponencial: " + exponencial,200,140);				
+		score = Math.floor((frames / 60) * 100);
+		if (score % 100 == 0) scoreTemp = score;
+		ctx.font = "50px Avenir";
+	  	ctx.fillStyle = "yellow";
+	  	ctx.fillText("Cocos: " + puntosExtra.length, 400, 50);	    
+	  	ctx.fillText("Puntos: " + scoreTemp, 400, 100);
+	  	let misVidas = "";
+	  	damage.forEach(function(elem){
+	  		misVidas = misVidas + "X";
+	  	});	  	
+	  	ctx.fillText("Damage: " + misVidas, 400, 150);	    
 		
+		dibujaIsla();
+		dibujaLinea();		
+		dibujaCaracter();
+		dibujaBombas();		
+		dibujaCocos();		
+		// dibujaCascaras();		
+		controlTiempo();
+	}
+	function dibujaBombas(){
+		// AGREGAR BOMBAS
+		if (bombas.length < 3){
+			bombas.unshift({
+				x:(Math.random() * 900) + 60, 
+				y:Math.random() * 20,
+				colision:false,
+				id:Math.random()
+			});
+		}
+		// ELIMINAR BOMBAS QUE YA NO ESTAN EN EL ESCENARIO
+		for(let i = 0; i< bombas.length; i++){
+			if (bombas[i].y > cvs.height){
+				bombas.splice(i, 1);				
+			}
+		}		
+		// CHECAR COLISION		
+		// ctx.rect(bombas[i].x, bombas[i].y,bomba.width / 10 , bomba.height / 10);
+		// ctx.rect(chX + 25,	chY + 25,	chW - 58,			chH);
+		for(let i = 0; i< bombas.length; i++){
+			if (
+				bombas[i].x + (bomba.width / 10) > chX + 25
+				&&
+				bombas[i].x < (chX + 25) + (chW - 58)
+				&&
+				bombas[i].y - (bomba.height / 10) > chY
+				&&
+				bombas[i].y - (bomba.height / 10) < chY + chH
+				){								
+				bombas[i].colision = true;
+				if (damage.indexOf(bombas[i].id) == -1){					
+					damage.push(bombas[i].id);
+				}			
+				// ctx.strokeStyle="red";
+				// ctx.rect(bombas[i].x, bombas[i].y,bomba.width / 10 , bomba.height / 10);
+				// ctx.stroke();
+				// console.log("colission");				
+			}
+		}
+		// DIBUJAR BOMBAS
+		// if (frames%fps === 0){ cada segundo		
+		for(let i = 0; i< bombas.length; i++){
+			if (bombas[i].colision){
+				ctx.drawImage(kapow,
+					bombas[i].x,
+					bombas[i].y,
+					bomba.width / 5,
+					bomba.height / 5
+				);
+			} else {
+				ctx.drawImage(bomba,			
+					bombas[i].x,
+					bombas[i].y,
+					bomba.width / 10,
+					bomba.height / 10
+				);
+			}
+			
+			// ctx.strokeStyle="black";
+			// ctx.rect(bombas[i].x, bombas[i].y,bomba.width / 10 , bomba.height / 10);
+			// ctx.stroke();
+			bombas[i].y = bombas[i].y * 1.025;
+		}		
+
+		if (damage.length >= 5){
+			gameOver = true;
+		}
+	}
+	function dibujaCocos(){
+		// AGREGAR COCOS
+		if (cocos.length < 3){
+			cocos.unshift({
+				x:(Math.random() * 900) + 60,
+				y:Math.random() * 20,
+				colision:false,
+				id:Math.random()
+			});
+		}
+		// ELIMINAR COCOS QUE YA NO ESTAN EN EL ESCENARIO
+		for(let i = 0; i< cocos.length; i++){
+			if (cocos[i].colision){
+				cocos.splice(i, 1);				
+			}
+		}		
+		// CHECAR COLISION		
+		// ctx.rect(cocos[i].x, cocos[i].y,coco.width / 10 , coco.height / 10);
+		// ctx.rect(chX + 25,	chY + 25,	chW - 58,			chH);
+		for(let i = 0; i< cocos.length; i++){
+			if (
+				cocos[i].x + (coco.width / 10) > chX + 25
+				&&
+				cocos[i].x < (chX + 25) + (chW - 58)
+				&&
+				cocos[i].y - (coco.height / 10) > chY
+				&&
+				cocos[i].y - (coco.height / 10) < chY + chH
+				){								
+				cocos[i].colision = true;
+				if (puntosExtra.indexOf(cocos[i].id) == -1){					
+					puntosExtra.push(cocos[i].id);
+				}			
+				// ctx.strokeStyle="red";
+				// ctx.rect(cocos[i].x, cocos[i].y,coco.width / 10 , coco.height / 10);
+				// ctx.stroke();
+				// console.log("colission");				
+			}
+		}
+		// DIBUJAR cocoS
+		// if (frames%fps === 0){ cada segundo		
+		for(let i = 0; i< cocos.length; i++){
+			
+			ctx.drawImage(coco,
+				cocos[i].x,
+				cocos[i].y,
+				coco.width / 10,
+				coco.height / 10
+			);			
+			
+			// ctx.strokeStyle="black";
+			// ctx.rect(cocos[i].x, cocos[i].y,coco.width / 10 , coco.height / 10);
+			// ctx.stroke();
+			if (cocos[i].y < 450) cocos[i].y = cocos[i].y * 1.025;		
+		}		
+
+		if (puntosExtra.length > 5){
+			winner = true;
+		}
+	}
+	// function dibujaCascaras(){
+	// 	// AGREGAR cascaras
+	// 	if (cascaras.length < 3){
+	// 		cascaras.unshift({
+	// 			x:(Math.random() * 900) + 60,
+	// 			y:Math.random() * 20,
+	// 			colision:false,
+	// 			id:Math.random()
+	// 		});
+	// 	}
+	// 	// ELIMINAR cascaras QUE YA NO ESTAN EN EL ESCENARIO
+	// 	for(let i = 0; i< cascaras.length; i++){
+	// 		if (cascaras[i].y > cvs.height){
+	// 			cascaras.splice(i, 1);				
+	// 		}
+	// 	}		
+	// 	// CHECAR COLISION		
+	// 	// ctx.rect(cascaras[i].x, cascaras[i].y,coco.width / 10 , coco.height / 10);
+	// 	// ctx.rect(chX + 25,	chY + 25,	chW - 58,			chH);
+	// 	for(let i = 0; i< cascaras.length; i++){
+	// 		if (
+	// 			cascaras[i].x + (cascara.width / 10) > chX + 25
+	// 			&&
+	// 			cascaras[i].x < (chX + 25) + (chW - 58)
+	// 			&&
+	// 			cascaras[i].y - (cascara.height / 10) > chY
+	// 			&&
+	// 			cascaras[i].y - (cascara.height / 10) < chY + chH
+	// 			){								
+	// 			cascaras[i].colision = true;
+	// 			if (puntosExtra.indexOf(cascaras[i].id) == -1){					
+	// 				puntosExtra.push(cascaras[i].id);
+	// 			}			
+	// 			// ctx.strokeStyle="red";
+	// 			// ctx.rect(cascaras[i].x, cascaras[i].y,cascara.width / 10 , cascara.height / 10);
+	// 			// ctx.stroke();
+	// 			// console.log("colission");				
+	// 		}
+	// 	}
+	// 	// DIBUJAR cascaras
+	// 	// if (frames%fps === 0){ cada segundo		
+	// 	for(let i = 0; i< cascaras.length; i++){
+			
+	// 		ctx.drawImage(cascara,
+	// 			cascaras[i].x,
+	// 			cascaras[i].y,
+	// 			cascara.width / 10,
+	// 			cascara.height / 10
+	// 		);			
+			
+	// 		// ctx.strokeStyle="black";
+	// 		// ctx.rect(cascaras[i].x, cascaras[i].y,cascara.width / 10 , cascara.height / 10);
+	// 		// ctx.stroke();
+	// 		if (cascaras[i].y < 500) cascaras[i].y = cascaras[i].y * 1.025;		
+
+	// 	}		
+
+	// 	if (puntosExtra.length > 5){
+	// 		winner = true;
+	// 	}
+	// }
+	function drawEllipse(centerX, centerY, width, height, piColor) {
+		ctx.beginPath();
+		ctx.moveTo(centerX, centerY - height/2); // A1
+		ctx.bezierCurveTo(
+			centerX + width/2, centerY - height/2, // C1
+			centerX + width/2, centerY + height/2, // C2
+			centerX, centerY + height/2); // A2
+		ctx.strokeStyle = piColor;
+		ctx.stroke();
+		// ctx.fillStyle = "red";
+  		// ctx.fill();
+  		// ctx.closePath();	
+	}
+	function redimensionar(){
+		// RESIZE
+		cvs.width = window.innerWidth - 30;
+		cvs.height = window.innerHeight - 30;
+		// console.log("Width " + window.innerWidth);
+		// console.log("Height " + window.innerHeight);		
+		chX = (cvs.width / 2) - 106.5;
+		centro = chX;
+		chY = cvs.height / 2;
+		horizonte = cvs.height / 3;
+		cuadritoSize = (cvs.height - horizonte) / 5;				
 	}	
 
-	function getPosition(el) {
-	  var xPosition = 0;
-	  var yPosition = 0;
-	 
-	  while (el) {
-	    xPosition += (el.offsetLeft - el.scrollLeft + el.clientLeft);
-	    yPosition += (el.offsetTop - el.scrollTop + el.clientTop);
-	    el = el.offsetParent;
-	  }
+	function dibujaLinea(){				
 
-	  return {
-	    x: xPosition,
-	    y: yPosition
-	  };
-	}  	
-	function redraw() {	
+		if ((chX - centro) == 0){
+			cualH = 0;
+			cualV = 0;
+			// //limite izquierdo
+			// ctx.beginPath();
+			// ctx.moveTo(island.x + 110,550);
+			// ctx.lineTo(island.x + 110,50);
+			// ctx.stroke();
 
-		if (frames%2000 == 0) {						
-			if (jumpingTimeControl > 0) jumpingTimeControl -= jumpingTimeControl;
-			if (jumpingTimeControl == 0) jumping = false;			
-		}	
+			// //limite derecho
+			// ctx.beginPath();
+			// ctx.moveTo(island.width - 990,550);
+			// ctx.lineTo(island.width - 990,50);
+			// ctx.stroke();
+
+			// ctx.beginPath();
+			// ctx.moveTo(cvs.width / 3,cvs.width / 2);
+			// ctx.lineTo((cvs.width / 3) * 2,cvs.width / 2);
+			// ctx.stroke();
+		}else if((chX - centro) > 0){									
+			cualH = 1;
+			cualV = 0;			
+			//limite izquierdo
+			// ctx.beginPath();
+			// ctx.moveTo(island.x + 100,550);
+			// ctx.lineTo(island.x + 100,50);
+			// ctx.stroke();
+
+			// //limite derecho
+			// ctx.beginPath();
+			// ctx.moveTo(island.width - 1020,550);
+			// ctx.lineTo(island.width - 1020,50);
+			// ctx.stroke();
+
+			if (chX + (chW / 2) > island.width - 1020){
+				// hombre al agua
+				cualH = 0;
+				cualV = 1;
+				gravedad = gravedad * 1.01;	
+			}
+			// peso a la derecha			
+			// ctx.beginPath();
+			// ctx.moveTo(	cvs.width / 3, 		cvs.width / 2);
+			// ctx.lineTo(	(cvs.width / 3) * 2,(cvs.width / 2) + 50);
+			// ctx.stroke();
+		} else{
+			cualH = 1;
+			cualV = 1;			
+
+			//limite izquierdo
+			// ctx.beginPath();
+			// ctx.moveTo(island.x + 130,550);
+			// ctx.lineTo(island.x + 130,50);
+			// ctx.stroke();
+			if (chX < island.x){
+				// hombre al agua
+				cualH = 0;
+				cualV = 1;
+				gravedad = gravedad * 1.01;	
+			}
+
+			//limite derecho
+			// ctx.beginPath();
+			// ctx.moveTo(island.width - 975,550);
+			// ctx.lineTo(island.width - 975,50);
+			// ctx.stroke();
+			// peso a la izquierda			
+			// ctx.beginPath();
+			// ctx.moveTo(	cvs.width / 3, 		(cvs.width / 2) + 50);
+			// ctx.lineTo(	(cvs.width / 3) * 2,cvs.width / 2);
+			// ctx.stroke();
+		}				
 		
-		// Draw shadow
-		if (jumping) {
-			drawEllipse(insideX + (50 * factor), insideY + (30 * factor), (120 * factor) - breathAmt, 4 * factor, "black");
-	  	} else {
-			drawEllipse(insideX + (50 * factor), insideY + (30 * factor), (240 * factor) - breathAmt, 8 * factor, "red");
-		}	  		
+	}
 		
-		if (jumping) {			
-			context.drawImage(img["leftArm-jump"]		, insideX + (40 * factor)	, insideY - (42 * factor)	- (breathAmt) ,img["leftArm-jump"].width	* factor, factor * img["leftArm-jump"].height);
-	  	} else {
-	  		context.drawImage(img["leftArm"]		, insideX + (40 * factor)	, insideY - (42 * factor)	- (breathAmt) ,img["leftArm"].width	* factor, factor * img["leftArm"].height);
+	function startGame() {		
+		console.log("startGame");
+	  	if (intervalo>0) return;
+	  	else {	  		
+	  		intervalo=setInterval( function(){ update(); }, 1000/fps)
+	  	}	  	
+	}	
+	function controlTiempo(){
+		frames ++;
+		if (frames%fps === 0){
+			// console.log("Ahora si cada segundo");			
+		}			
+
+		if ( frames > 15000 || gameOver) { // fps * 10 segundos = 600, se acaba el juego a los 10 segundos
+			console.log(damage);
+			ctx.font = "120px courier";
+  			ctx.strokeStyle = 'red';
+  			ctx.lineWidth = 8;  			  			
+  			ctx.strokeText("Game Over",cvs.width / 2 - 350,250);
+  			ctx.font = "40px Arial";
+			stop();
 		}
-
-		if (jumping) {			
-			context.drawImage(img["legs-jump"]		, (insideX )		, (insideY ) - (6 * factor)		,img["legs-jump"].width		* factor, factor * img["legs-jump"].height);
-	  	} else {			
-			context.drawImage(img["legs"]		, (insideX)		, (insideY )		,img["legs"].width		* factor, factor * img["legs"].height);
-		}
-
-		context.drawImage(img["torso"]		, insideX					, insideY - (50	* factor)	,img["torso"].width 	* factor, factor * img["torso"].height);		
-
-		context.drawImage(img["head"]		, insideX - (10 * factor)	, insideY - (125 * factor)	- breathAmt , img["head"].width		* factor, factor * img["head"].height);
-		context.drawImage(img["hair"]		, insideX - (37 * factor)	, insideY - (138 * factor)	- breathAmt , img["hair"].width 		* factor, factor * img["hair"].height);
-
-		if (jumping) {			
-			context.drawImage(img["rightArm-jump"]	, insideX - (35 * factor)	, insideY - (42	* factor) - (breathAmt * factor)	- breathAmt ,img["rightArm-jump"].width	* factor, factor * img["rightArm-jump"].height);
-	  	} else {			
-			context.drawImage(img["rightArm"]	, insideX - (15 * factor)	, insideY - (42	* factor) - (breathAmt * factor) - breathAmt ,img["rightArm"].width	* factor, factor * img["rightArm"].height);
-	  	}	
-			
-
-		drawEllipse(insideX + (47 * factor), insideY - (68 * factor) - breathAmt, (8 * factor), (curEyeHeight * factor), "black"); // Ojo Izquierdo
-	  	drawEllipse(insideX + (58 * factor), insideY - (68 * factor) - breathAmt, (8 * factor), (curEyeHeight * factor), "black"); // Ojo Derecho
-
-		return;
-
-	  	// if (jumping) {
-		// 	Y -= jumpHeight;
-		// }  	 	
-	  
 	}
-
-	function drawEllipse(centerX, centerY, width, height, piFillStyle) {
-
-	  context.beginPath();
-	  
-	  context.moveTo(centerX, centerY - height/2);
-	  
-	  context.bezierCurveTo(
-		centerX + width/2, centerY - height/2,
-		centerX + width/2, centerY + height/2,
-		centerX, centerY + height/2);
-
-	  context.bezierCurveTo(
-		centerX - width/2, centerY + height/2,
-		centerX - width/2, centerY - height/2,
-		centerX, centerY - height/2);
-	 
-	  context.fillStyle = piFillStyle;
-	  context.fill();
-	  context.closePath();	
+	function stop(){
+		clearInterval(intervalo);
 	}
+	function dibujaCaracter(){
+		// ctx.drawImage(spt, sx, sy, sw, sh, dx, dy, dw, dh)
+		// ctx.drawImage(spt, 0, 0, spt.width, spt.height, (spt.width / 3) * 2 , (spt.height / 2) * 1, 300, 300);
+		for(let i = 0; i< bombas.length; i++){
+			if(bombas[i].colision){
+				cualH = 2;
+				cualV = 1;
+			}
+		}
+		chW = ( spt.width / cuantosH ) ;
+		chH = ( spt.height / cuantosV ) ;		
 
-	function updateBreath() { 
-					
-	  if (breathDir === 1) {  // breath in
-		breathAmt -= breathInc;
-		if (breathAmt < -breathMax) {
-		  breathDir = -1;
-		}
-	  } else {  // breath out
-		breathAmt += breathInc;
-		if(breathAmt > breathMax) {
-		  breathDir = 1;
-		}
-	  }
+		if(cualH ==1 && cualV == 0){
+			ctx.drawImage(spt,
+				chW * cualH,
+				chH * cualV,
+				chW - 20,
+				chH,
+				chX,
+				chY * gravedad,
+				chW,
+				chH
+				);
+		} else{
+			ctx.drawImage(spt,
+				chW * cualH,
+				chH * cualV,
+				chW,
+				chH,
+				chX,
+				chY * gravedad,
+				chW,
+				chH
+				);
+		}		
+		if (	chX < (0 - (chW / 2)) ||
+				chX > cvs.width - (chW / 2) ||
+				(chY * gravedad) < (0 - (chH / 2)) ||
+				(chY * gravedad) > cvs.height - (chH / 2)
+			)
+		{
+			gameOver = true;
+		};
+		// ctx.strokeStyle="black";
+		// ctx.rect(chX + 25,	chY + 25,	chW - 58,			chH);
+		// ctx.stroke();
 	}
+	function dibujaIsla(){		
+		// ctx.drawImage(spt, sx, sy, sw, sh, dx, dy, dw, dh)
+		// ctx.drawImage(spt, 0, 0, spt.width, spt.height, (spt.width / 3) * 2 , (spt.height / 2) * 1, 300, 300);					
+		if ((chX - centro) == 0){
+			ctx.drawImage(island,
+				50,
+				50,
+				island.width / 2,
+				island.height / 2
+				);		
+		}else if((chX - centro) > 0){
+			// peso a la derecha
+			ctx.rotate(5*Math.PI/180);
+			ctx.drawImage(island,
+				75,
+				5,
+				island.width / 2,
+				island.height / 2
+				);		
+			ctx.rotate(-5*Math.PI/180);
+		} else{
+			// peso a la izquierda
+			// aqui hay que dibujar la isla mas a la izquierda por la rotacion
+			ctx.rotate(-5*Math.PI/180);
+			ctx.drawImage(island,
+				25,
+				95,
+				island.width / 2,
+				island.height / 2
+				);		
+			ctx.rotate(5*Math.PI/180);
+		}				
 
-	function updateBlink() { 
-					
-	  eyeOpenTime += blinkUpdateTime;
 		
-	  if(eyeOpenTime >= timeBtwBlinks){
-		blink();
-	  }
 	}
+	// EVENTOS	
+	fondo.onload = function(){
+	    ctx.drawImage(fondo,0,0,cvs.width,cvs.height);
+	    ctx.font = "100px Arial";
+		ctx.fillText(" clic para jugar!!!",cvs.width / 2 - 350,cvs.height / 2 - 40);
+	}
+	document.getElementById("miCanvas").onclick = function() {		
+		startGame();
+	}
+	addEventListener('keydown', function(e){		
+		switch(e.keyCode){
+			case 32:				
+				cualH = 2;
+				cualV = 1;
+				break;			
+			case 37:
+				// console.log("Izquierda");
+				chX -= VelocidadNormal + exponencial;
+				break;			
+			case 38:
+				// console.log("Arriba");
+				chY -= VelocidadNormal + exponencial;
+				break;			
+			case 39:
+				// console.log("Derecha");
+				chX += VelocidadNormal + exponencial;
+				break;			
+			case 40:
+				// console.log("Abajo");
+				chY += VelocidadNormal + exponencial;
+				break;			
+			default:			
+		}		
+	});
+	function Board(){		
+	  	this.x = 0;
+	  	this.y = 0;
+	  	this.score = 0;
+	  	this.nubeX = 0;
+	  	this.derecha = false;
 
-	function blink() {
+	  	// this.img.onload = function(){
+	  	// 	this.draw();
+	  	// }.bind(this); // cambiar el apuntador de img a Board
 
-	  curEyeHeight -= 1;
-	  if (curEyeHeight <= 0) {
-		eyeOpenTime = 0;
-		curEyeHeight = maxEyeHeight;
-	  } else {
-		setTimeout(blink, 10);
-	  }
-	}
-	function salta(){		
-		if (!jumping){
-			jumping = true;
-			jumpingTimeControl = 6000;
-		}
-	}
-	
-	function updateFPS() {
-		
-		curFPS = numFramesDrawn;
-		numFramesDrawn = 0;
+	  	// this.img2.onload = function(){
+	  	// 	this.draw();
+	  	// }.bind(this); // cambiar el apuntador de img a Board
+
+	  	this.move = function(){				
+	  		this.x--;
+	  		if(this.x < -cvs.width) this.x = 0;
+
+	  		if (this.derecha){
+	  			// console.log("derecha");
+	  			this.nubeX++;
+	  			if(this.nubeX == 0 ) this.derecha = false ;
+	  		} else {
+	  			// console.log("izquierda");
+	  			this.nubeX--;
+	  			if(this.nubeX == -60 ) this.derecha = true ;
+	  		}	  		
+	  	}
+
+	  	this.draw = function(){	
+  			this.move();  			
+  			ctx.drawImage(img, this.x, horizonte, cvs.width, cvs.height);
+			ctx.drawImage(img2, (this.x + cvs.width), horizonte, cvs.width, cvs.height);			
+			// dibujando las nubes
+			// ctx.drawImage(nube, this.x + 10 , 0, cvs.width - 10, cvs.height - horizonte);
+			ctx.drawImage(nube,
+				this.nubeX,
+				0,
+				cvs.width + 80,
+				cvs.height - (horizonte * 2));
+	  	}	  	
 	}
 }

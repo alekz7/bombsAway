@@ -1,6 +1,17 @@
+html{
+	background: black;
+}
+body{
+	margin: 1;
+}
+
+div{
+	width: 100%;
+   	text-align:center;
+}
 canvas{
-	border: 1px solid red;
+	border: 1px solid black;
+	background: white;
+	display: inline;
 }
-#start-button{
-	color : red;
-}
+
