@@ -5,6 +5,7 @@ window.onload = function() {
 	let fps = 60;
 	let frames = 0;
 	let intervalo = 0;
+
 	// PROTAGONISTA
 	let spt = new Image();
 	let cualH = 0;
@@ -22,34 +23,54 @@ window.onload = function() {
 
 	// PLATAFORMA
 	let island = new Image();
-	let horizonte;
-	let cuadritoSize;
+	let horizonte;	
 	let board = new Board();
 	let img = new Image();
 	let img2 = new Image();
 	let nube = new Image();
 	let bomba = new Image();
 	let kapow = new Image();
-	let coco = new Image();
-	// let cascara = new Image();
+	let coco = new Image();	
 	let fondo = new Image();
 	let damage = [];
 	let puntosExtra = [];
 	let gameOver = false;
 	let ganador = false;
-
+	let winnerScore = false;
+	let winnerCocos = false;
+	let soundGame = new Audio();
+	let soundGameOver = new Audio();
+	let soundGameWinner = new Audio();			
+	let dificultad = 3;
+  	
 	//BOMBAS
 	bombas 		= [];	
-	cocos   	= [];
-	// cascaras 	= [];
-	// for(let i = 0; i< 10; i++){
-	// 	bombas[i] = {x:i * 60, y:1};
-	// }				
+	cocos   	= [];	
 
 	redimensionar();
 	cargarComponentes();
 	
-	// startGame();
+	function resetVariables(nivel){
+		intervalo = 0;
+		gameOver = false;
+		ganador = false;
+		winnerScore = false;
+		winnerCocos = false;	
+		bombas 		= [];
+		cocos   	= [];
+		puntosExtra = [];
+		frames		= 0;
+		chX = (cvs.width / 2) - 106.5;
+		chY = cvs.height / 2;
+		gravedad = 1;
+		if (nivel == 0) {
+			dificultad = 3;
+			damage = [];
+		}
+		else {
+			dificultad++;
+		}		
+	}
 
 	// COMPONENTES
 	function cargarComponentes(){		
@@ -63,47 +84,49 @@ window.onload = function() {
 		nube.src = "images/Nubes.jpg";
 		bomba.src = "images/bombaFire.png";
 		kapow.src = "images/kapow.png";
-		coco.src  = "images/coco.png"
-		// cascara.src  = "images/cascara.png"
+		coco.src  = "images/coco.png"		
 		fondo.src = "images/background.jpg"
+		soundGame.src = "sound/05 Super Mario 64 Main Theme.mp3";
+		soundGameOver.src = "sound/28 Koopa's Message.mp3";
+		soundGameWinner.src = "sound/19 Correct Solution.mp3";			
 	}	
 	function update(){ // se esta ejecutando cada fps veces por segundo		
 		ctx.clearRect(0,0,cvs.width,cvs.height);
 		board.draw();
-		// ctx.font = "20px Arial";
-		// ctx.fillText("chX: " + chX,200,20);
-		// ctx.fillText("cvs.width: " + cvs.width,200,40);
-		// ctx.fillText("chW / 2: " + chW ,200,60);
-		let center = (cvs.width / 2);
-		// ctx.fillText("Center:" + center,200,80);		
-		// chX += (center2 / 100);
-		// ctx.fillText("centro: " + (chX - centro),200,120);		
-		exponencial = (chX - centro) / 100;
-		chX += exponencial;
-		// ctx.fillText("exponencial: " + exponencial,200,140);				
-		score = Math.floor((frames / 60) * 100);
-		if (score % 100 == 0) scoreTemp = score;
-		ctx.font = "50px Avenir";
-	  	ctx.fillStyle = "yellow";
-	  	ctx.fillText("Cocos: " + puntosExtra.length, 400, 50);	    
-	  	ctx.fillText("Puntos: " + scoreTemp, 400, 100);
-	  	let misVidas = "";
-	  	damage.forEach(function(elem){
-	  		misVidas = misVidas + "X";
-	  	});	  	
-	  	ctx.fillText("Damage: " + misVidas, 400, 150);	    
-		
+		dibujaTableroScore();
 		dibujaIsla();
 		dibujaLinea();		
 		dibujaCaracter();
 		dibujaBombas();		
 		dibujaCocos();		
-		// dibujaCascaras();		
 		controlTiempo();
+	}
+	function dibujaTableroScore(){
+		let center = (cvs.width / 2);		
+		exponencial = (chX - centro) / 100;
+		chX += exponencial;		
+		score = Math.floor((frames / 60) * 100);
+		if (score % 100 == 0) scoreTemp = score;
+		ctx.font = "50px courier";
+	  	ctx.fillStyle = "yellow";
+	  	ctx.fillText("Cocos: " + puntosExtra.length, 400, 50);	    
+	  	ctx.fillText("Puntos: " + scoreTemp, 400, 100);
+	  	if (scoreTemp >= 3000) {
+	  		winnerScore = true;
+	  		cualH = 2;
+			cualV = 0;
+			dibujaCaracter();	  		
+	  	}
+	  	let misVidas = "";
+	  	damage.forEach(function(elem){
+	  		misVidas = misVidas + "X";
+	  	});	  	
+	  	ctx.fillText("Damage: " + misVidas, 400, 150);
+	  	ctx.fillText("Nivel: " + (dificultad - 3), 950, 400);
 	}
 	function dibujaBombas(){
 		// AGREGAR BOMBAS
-		if (bombas.length < 3){
+		if (bombas.length < dificultad){
 			bombas.unshift({
 				x:(Math.random() * 900) + 60, 
 				y:Math.random() * 20,
@@ -133,11 +156,7 @@ window.onload = function() {
 				bombas[i].colision = true;
 				if (damage.indexOf(bombas[i].id) == -1){					
 					damage.push(bombas[i].id);
-				}			
-				// ctx.strokeStyle="red";
-				// ctx.rect(bombas[i].x, bombas[i].y,bomba.width / 10 , bomba.height / 10);
-				// ctx.stroke();
-				// console.log("colission");				
+				}							
 			}
 		}
 		// DIBUJAR BOMBAS
@@ -167,6 +186,9 @@ window.onload = function() {
 
 		if (damage.length >= 5){
 			gameOver = true;
+			cualH = 2;
+			cualV = 1;
+			dibujaCaracter();
 		}
 	}
 	function dibujaCocos(){
@@ -201,11 +223,7 @@ window.onload = function() {
 				cocos[i].colision = true;
 				if (puntosExtra.indexOf(cocos[i].id) == -1){					
 					puntosExtra.push(cocos[i].id);
-				}			
-				// ctx.strokeStyle="red";
-				// ctx.rect(cocos[i].x, cocos[i].y,coco.width / 10 , coco.height / 10);
-				// ctx.stroke();
-				// console.log("colission");				
+				}							
 			}
 		}
 		// DIBUJAR cocoS
@@ -217,140 +235,34 @@ window.onload = function() {
 				cocos[i].y,
 				coco.width / 10,
 				coco.height / 10
-			);			
-			
-			// ctx.strokeStyle="black";
-			// ctx.rect(cocos[i].x, cocos[i].y,coco.width / 10 , coco.height / 10);
-			// ctx.stroke();
+			);								
 			if (cocos[i].y < 450) cocos[i].y = cocos[i].y * 1.025;		
 		}		
 
-		if (puntosExtra.length > 5){
-			winner = true;
+		if (puntosExtra.length >= 10){
+			winnerCocos = true;
+			cualH = 2;
+			cualV = 0;
+			dibujaCaracter();			
 		}
-	}
-	// function dibujaCascaras(){
-	// 	// AGREGAR cascaras
-	// 	if (cascaras.length < 3){
-	// 		cascaras.unshift({
-	// 			x:(Math.random() * 900) + 60,
-	// 			y:Math.random() * 20,
-	// 			colision:false,
-	// 			id:Math.random()
-	// 		});
-	// 	}
-	// 	// ELIMINAR cascaras QUE YA NO ESTAN EN EL ESCENARIO
-	// 	for(let i = 0; i< cascaras.length; i++){
-	// 		if (cascaras[i].y > cvs.height){
-	// 			cascaras.splice(i, 1);				
-	// 		}
-	// 	}		
-	// 	// CHECAR COLISION		
-	// 	// ctx.rect(cascaras[i].x, cascaras[i].y,coco.width / 10 , coco.height / 10);
-	// 	// ctx.rect(chX + 25,	chY + 25,	chW - 58,			chH);
-	// 	for(let i = 0; i< cascaras.length; i++){
-	// 		if (
-	// 			cascaras[i].x + (cascara.width / 10) > chX + 25
-	// 			&&
-	// 			cascaras[i].x < (chX + 25) + (chW - 58)
-	// 			&&
-	// 			cascaras[i].y - (cascara.height / 10) > chY
-	// 			&&
-	// 			cascaras[i].y - (cascara.height / 10) < chY + chH
-	// 			){								
-	// 			cascaras[i].colision = true;
-	// 			if (puntosExtra.indexOf(cascaras[i].id) == -1){					
-	// 				puntosExtra.push(cascaras[i].id);
-	// 			}			
-	// 			// ctx.strokeStyle="red";
-	// 			// ctx.rect(cascaras[i].x, cascaras[i].y,cascara.width / 10 , cascara.height / 10);
-	// 			// ctx.stroke();
-	// 			// console.log("colission");				
-	// 		}
-	// 	}
-	// 	// DIBUJAR cascaras
-	// 	// if (frames%fps === 0){ cada segundo		
-	// 	for(let i = 0; i< cascaras.length; i++){
-			
-	// 		ctx.drawImage(cascara,
-	// 			cascaras[i].x,
-	// 			cascaras[i].y,
-	// 			cascara.width / 10,
-	// 			cascara.height / 10
-	// 		);			
-			
-	// 		// ctx.strokeStyle="black";
-	// 		// ctx.rect(cascaras[i].x, cascaras[i].y,cascara.width / 10 , cascara.height / 10);
-	// 		// ctx.stroke();
-	// 		if (cascaras[i].y < 500) cascaras[i].y = cascaras[i].y * 1.025;		
-
-	// 	}		
-
-	// 	if (puntosExtra.length > 5){
-	// 		winner = true;
-	// 	}
-	// }
-	function drawEllipse(centerX, centerY, width, height, piColor) {
-		ctx.beginPath();
-		ctx.moveTo(centerX, centerY - height/2); // A1
-		ctx.bezierCurveTo(
-			centerX + width/2, centerY - height/2, // C1
-			centerX + width/2, centerY + height/2, // C2
-			centerX, centerY + height/2); // A2
-		ctx.strokeStyle = piColor;
-		ctx.stroke();
-		// ctx.fillStyle = "red";
-  		// ctx.fill();
-  		// ctx.closePath();	
-	}
+	}	
 	function redimensionar(){
 		// RESIZE
 		cvs.width = window.innerWidth - 30;
-		cvs.height = window.innerHeight - 30;
-		// console.log("Width " + window.innerWidth);
-		// console.log("Height " + window.innerHeight);		
+		cvs.height = window.innerHeight - 30;		
 		chX = (cvs.width / 2) - 106.5;
 		centro = chX;
 		chY = cvs.height / 2;
-		horizonte = cvs.height / 3;
-		cuadritoSize = (cvs.height - horizonte) / 5;				
+		horizonte = cvs.height / 3;		
 	}	
-
 	function dibujaLinea(){				
 
 		if ((chX - centro) == 0){
 			cualH = 0;
-			cualV = 0;
-			// //limite izquierdo
-			// ctx.beginPath();
-			// ctx.moveTo(island.x + 110,550);
-			// ctx.lineTo(island.x + 110,50);
-			// ctx.stroke();
-
-			// //limite derecho
-			// ctx.beginPath();
-			// ctx.moveTo(island.width - 990,550);
-			// ctx.lineTo(island.width - 990,50);
-			// ctx.stroke();
-
-			// ctx.beginPath();
-			// ctx.moveTo(cvs.width / 3,cvs.width / 2);
-			// ctx.lineTo((cvs.width / 3) * 2,cvs.width / 2);
-			// ctx.stroke();
+			cualV = 0;			
 		}else if((chX - centro) > 0){									
 			cualH = 1;
-			cualV = 0;			
-			//limite izquierdo
-			// ctx.beginPath();
-			// ctx.moveTo(island.x + 100,550);
-			// ctx.lineTo(island.x + 100,50);
-			// ctx.stroke();
-
-			// //limite derecho
-			// ctx.beginPath();
-			// ctx.moveTo(island.width - 1020,550);
-			// ctx.lineTo(island.width - 1020,50);
-			// ctx.stroke();
+			cualV = 0;						
 
 			if (chX + (chW / 2) > island.width - 1020){
 				// hombre al agua
@@ -358,43 +270,22 @@ window.onload = function() {
 				cualV = 1;
 				gravedad = gravedad * 1.01;	
 			}
-			// peso a la derecha			
-			// ctx.beginPath();
-			// ctx.moveTo(	cvs.width / 3, 		cvs.width / 2);
-			// ctx.lineTo(	(cvs.width / 3) * 2,(cvs.width / 2) + 50);
-			// ctx.stroke();
+			
 		} else{
 			cualH = 1;
 			cualV = 1;			
-
-			//limite izquierdo
-			// ctx.beginPath();
-			// ctx.moveTo(island.x + 130,550);
-			// ctx.lineTo(island.x + 130,50);
-			// ctx.stroke();
+			
 			if (chX < island.x){
 				// hombre al agua
 				cualH = 0;
 				cualV = 1;
 				gravedad = gravedad * 1.01;	
-			}
-
-			//limite derecho
-			// ctx.beginPath();
-			// ctx.moveTo(island.width - 975,550);
-			// ctx.lineTo(island.width - 975,50);
-			// ctx.stroke();
-			// peso a la izquierda			
-			// ctx.beginPath();
-			// ctx.moveTo(	cvs.width / 3, 		(cvs.width / 2) + 50);
-			// ctx.lineTo(	(cvs.width / 3) * 2,cvs.width / 2);
-			// ctx.stroke();
-		}				
-		
-	}
-		
-	function startGame() {		
-		console.log("startGame");
+			}			
+		}					
+	}		
+	function startGame() {
+		console.log("startGame" + intervalo);
+		soundGame.play();
 	  	if (intervalo>0) return;
 	  	else {	  		
 	  		intervalo=setInterval( function(){ update(); }, 1000/fps)
@@ -406,14 +297,49 @@ window.onload = function() {
 			// console.log("Ahora si cada segundo");			
 		}			
 
-		if ( frames > 15000 || gameOver) { // fps * 10 segundos = 600, se acaba el juego a los 10 segundos
-			console.log(damage);
+		// if ( frames > 15000 || gameOver) { // fps * 10 segundos = 600, se acaba el juego a los 10 segundos
+		if ( gameOver) { // fps * 10 segundos = 600, se acaba el juego a los 10 segundos
+			soundGame.pause();
+			soundGameOver.play();
+			// console.log(damage);
 			ctx.font = "120px courier";
   			ctx.strokeStyle = 'red';
   			ctx.lineWidth = 8;  			  			
   			ctx.strokeText("Game Over",cvs.width / 2 - 350,250);
-  			ctx.font = "40px Arial";
+  			ctx.font = "80px courier";
+  			ctx.strokeText("Clic volver a Empezar", cvs.width / 2 - 550, 350);
+  			ctx.font = "40px courier";
+  			
 			stop();
+			intervalo = 0;
+			resetVariables(0);
+		}
+		if (winnerCocos){
+			soundGame.pause();
+			soundGameWinner.play();
+			ctx.font = "120px courier";
+  			ctx.strokeStyle = 'yellow';
+  			ctx.lineWidth = 8;  			  			
+  			ctx.strokeText("Winner",cvs.width / 2 - 350,250);
+  			ctx.strokeText("Cocos: " + puntosExtra.length, 350, 350);
+  			ctx.strokeText("Clic siguiente nivel", 350, 450);
+  			ctx.font = "40px courier";
+			stop();
+			intervalo = 0;
+			resetVariables(1);
+		}
+		if (winnerScore){
+			soundGame.pause();
+			soundGameWinner.play();
+			ctx.font = "120px courier";
+  			ctx.strokeStyle = 'yellow';
+  			ctx.lineWidth = 8;  			  			
+  			ctx.strokeText("Winner",cvs.width / 2 - 350,250);
+  			ctx.strokeText("Score: " + scoreTemp, 350, 350);
+  			ctx.strokeText("Clic siguiente nivel", 350, 450);
+  			ctx.font = "40px courier";
+			stop();
+			resetVariables(1);
 		}
 	}
 	function stop(){
@@ -429,13 +355,24 @@ window.onload = function() {
 			}
 		}
 		chW = ( spt.width / cuantosH ) ;
-		chH = ( spt.height / cuantosV ) ;		
+		chH = ( spt.height / cuantosV ) ;
 
 		if(cualH ==1 && cualV == 0){
 			ctx.drawImage(spt,
 				chW * cualH,
 				chH * cualV,
 				chW - 20,
+				chH,
+				chX,
+				chY * gravedad,
+				chW,
+				chH
+				);
+		} else if(cualH ==2 && cualV == 0) {
+			ctx.drawImage(spt,
+				chW * cualH - 20,
+				chH * cualV,
+				chW,
 				chH,
 				chX,
 				chY * gravedad,
@@ -461,10 +398,7 @@ window.onload = function() {
 			)
 		{
 			gameOver = true;
-		};
-		// ctx.strokeStyle="black";
-		// ctx.rect(chX + 25,	chY + 25,	chW - 58,			chH);
-		// ctx.stroke();
+		};		
 	}
 	function dibujaIsla(){		
 		// ctx.drawImage(spt, sx, sy, sw, sh, dx, dy, dw, dh)
@@ -497,15 +431,14 @@ window.onload = function() {
 				island.height / 2
 				);		
 			ctx.rotate(5*Math.PI/180);
-		}				
-
-		
+		}					
 	}
-	// EVENTOS	
-	fondo.onload = function(){
+	// EVENTOS		
+	fondo.onload = function(){		
 	    ctx.drawImage(fondo,0,0,cvs.width,cvs.height);
-	    ctx.font = "100px Arial";
-		ctx.fillText(" clic para jugar!!!",cvs.width / 2 - 350,cvs.height / 2 - 40);
+	    ctx.font = "100px courier";
+	    ctx.fillStyle = "red";
+	    ctx.fillText(" clic para jugar!!!",cvs.width / 2 - 450,cvs.height / 2 );			    
 	}
 	document.getElementById("miCanvas").onclick = function() {		
 		startGame();
