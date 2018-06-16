@@ -16,10 +16,11 @@ window.onload = function() {
 	let chY;
 	let chW;
 	let chH;
-	let VelocidadNormal = 15;
+	let VelocidadNormal = 100;
 	let centro;
 	let exponencial;
 	let gravedad = 1;
+	let scoreAvanzaNivel = 2000;
 
 	// PLATAFORMA
 	let island = new Image();
@@ -40,7 +41,9 @@ window.onload = function() {
 	let winnerCocos = false;
 	let soundGame = new Audio();
 	let soundGameOver = new Audio();
-	let soundGameWinner = new Audio();			
+	let soundGameWinner = new Audio();		
+	let soundGameCoin = new Audio();
+	let soundGameBomba = new Audio();
 	let dificultad = 3;
   	
 	//BOMBAS
@@ -68,6 +71,7 @@ window.onload = function() {
 			damage = [];
 		}
 		else {
+			damage.pop()
 			dificultad++;
 		}		
 	}
@@ -87,8 +91,10 @@ window.onload = function() {
 		coco.src  = "images/coco.png"		
 		fondo.src = "images/background.jpg"
 		soundGame.src = "sound/05 Super Mario 64 Main Theme.mp3";
-		soundGameOver.src = "sound/28 Koopa's Message.mp3";
+		soundGameOver.src = "sound/New_Super_Mario_Bros_Death_Sound_Effect.mp3";
 		soundGameWinner.src = "sound/19 Correct Solution.mp3";			
+		soundGameCoin.src = "sound/New_Super_Mario_Bros_Coin_Sound_Effect.mp3";
+		soundGameBomba.src = "sound/01_Start Up.mp3";
 	}	
 	function update(){ // se esta ejecutando cada fps veces por segundo		
 		ctx.clearRect(0,0,cvs.width,cvs.height);
@@ -111,7 +117,7 @@ window.onload = function() {
 	  	ctx.fillStyle = "yellow";
 	  	ctx.fillText("Cocos: " + puntosExtra.length, 400, 50);	    
 	  	ctx.fillText("Puntos: " + scoreTemp, 400, 100);
-	  	if (scoreTemp >= 3000) {
+	  	if (scoreTemp >= scoreAvanzaNivel) {
 	  		winnerScore = true;
 	  		cualH = 2;
 			cualV = 0;
@@ -155,7 +161,8 @@ window.onload = function() {
 				){								
 				bombas[i].colision = true;
 				if (damage.indexOf(bombas[i].id) == -1){					
-					damage.push(bombas[i].id);
+					damage.push(bombas[i].id);					
+					soundGameBomba.play();
 				}							
 			}
 		}
@@ -223,6 +230,7 @@ window.onload = function() {
 				cocos[i].colision = true;
 				if (puntosExtra.indexOf(cocos[i].id) == -1){					
 					puntosExtra.push(cocos[i].id);
+					soundGameCoin.play();
 				}							
 			}
 		}
@@ -300,16 +308,15 @@ window.onload = function() {
 		// if ( frames > 15000 || gameOver) { // fps * 10 segundos = 600, se acaba el juego a los 10 segundos
 		if ( gameOver) { // fps * 10 segundos = 600, se acaba el juego a los 10 segundos
 			soundGame.pause();
-			soundGameOver.play();
-			// console.log(damage);
+			soundGame.currentTime = 0;
+			soundGameOver.play();			
 			ctx.font = "120px courier";
   			ctx.strokeStyle = 'red';
   			ctx.lineWidth = 8;  			  			
   			ctx.strokeText("Game Over",cvs.width / 2 - 350,250);
   			ctx.font = "80px courier";
   			ctx.strokeText("Clic volver a Empezar", cvs.width / 2 - 550, 350);
-  			ctx.font = "40px courier";
-  			
+  			ctx.font = "40px courier";  			
 			stop();
 			intervalo = 0;
 			resetVariables(0);
@@ -317,12 +324,16 @@ window.onload = function() {
 		if (winnerCocos){
 			soundGame.pause();
 			soundGameWinner.play();
-			ctx.font = "120px courier";
+			ctx.font = "100px courier";
   			ctx.strokeStyle = 'yellow';
   			ctx.lineWidth = 8;  			  			
   			ctx.strokeText("Winner",cvs.width / 2 - 350,250);
+  			ctx.font = "120px courier";
+  			ctx.strokeStyle = 'black';
   			ctx.strokeText("Cocos: " + puntosExtra.length, 350, 350);
-  			ctx.strokeText("Clic siguiente nivel", 350, 450);
+  			ctx.font = "80px courier";
+  			ctx.strokeStyle = 'yellow';
+  			ctx.strokeText("Clic siguiente nivel", 150, 450);
   			ctx.font = "40px courier";
 			stop();
 			intervalo = 0;
@@ -331,12 +342,16 @@ window.onload = function() {
 		if (winnerScore){
 			soundGame.pause();
 			soundGameWinner.play();
-			ctx.font = "120px courier";
+			ctx.font = "100px courier";
   			ctx.strokeStyle = 'yellow';
   			ctx.lineWidth = 8;  			  			
   			ctx.strokeText("Winner",cvs.width / 2 - 350,250);
+  			ctx.font = "120px courier";
+  			ctx.strokeStyle = 'black';
   			ctx.strokeText("Score: " + scoreTemp, 350, 350);
-  			ctx.strokeText("Clic siguiente nivel", 350, 450);
+  			ctx.font = "80px courier";
+  			ctx.strokeStyle = 'yellow';
+  			ctx.strokeText("Clic siguiente nivel", 150, 450);
   			ctx.font = "40px courier";
 			stop();
 			resetVariables(1);
@@ -436,9 +451,18 @@ window.onload = function() {
 	// EVENTOS		
 	fondo.onload = function(){		
 	    ctx.drawImage(fondo,0,0,cvs.width,cvs.height);
-	    ctx.font = "100px courier";
+	    ctx.font = "60px courier";
 	    ctx.fillStyle = "red";
-	    ctx.fillText(" clic para jugar!!!",cvs.width / 2 - 450,cvs.height / 2 );			    
+	    ctx.lineWidth = 8;
+	    ctx.strokeText(" clic para jugar!!!",cvs.width / 2 - 450,cvs.height / 3 ); 
+	    
+	    ctx.font = "80px courier";
+  		ctx.fillStyle = "yellow";
+  		ctx.lineWidth = 8;  			  			
+
+	    ctx.strokeText("junta 10 cocos",cvs.width / 2 - 450,cvs.height / 2 + 50);
+	    ctx.strokeText("o acumula " + scoreAvanzaNivel + " puntos",cvs.width / 2 - 450,cvs.height / 2 + 120);
+	    ctx.strokeText("para avanzar de nivel",cvs.width / 2 - 450,cvs.height / 2 + 190);	    
 	}
 	document.getElementById("miCanvas").onclick = function() {		
 		startGame();
